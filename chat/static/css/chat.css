@@ -1,0 +1,17 @@
+body{padding:0;margin:0}
+.ui-widget{font-size:90%}
+#post_container{position:fixed;top:0;left:0;background-color:white;z-index:2;width:100%;
+                display:flex;display:-ms-flexbox;-ms-flex-align:center;align-items:center;}
+#profile_icon{padding:0;margin:0;vertical-align:middle;padding:0.2em}
+#post_midcol{flex:auto;-ms-flex:auto;}
+#post_midcol > input{width:100%}
+#post_rightcol {margin:0 0.2em 0 8px}
+#post_rightcol > button{margin:0;height:1.5em;width:1.5em;}
+#msg_container{position:absolute;top:0;left:0;overflow:auto;z-index:1;width:100%;}
+#msg_container div.message-content{font-size:90%;padding:0.2em 0 0.2em 0;clear:both;border-top-width:0}
+#msg_container div.message-content img{vertical-align:middle;margin:0 0.2em}
+#msg_container div.message-content div  {display:inline}
+#msg_container div.message-content div *{display:inline}
+#ws_status{position:fixed;left:0;top:0;z-index:10}
+#ws_status_msg{position:fixed;left:0;top:0;z-index:11;font-size:90%}
+#ws_status_msg > div > div {margin:0.5ex}

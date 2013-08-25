@@ -1,0 +1,24 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML><HEAD><TITLE>チャット</TITLE><META name="viewport" content="width=device-width"><STYLE type="text/css"><!--
+a{word-break:break-all;-webkit-hyphens: auto;hyphens: auto;}
+--></STYLE></HEAD><BODY>{% comment
+%}<FORM method="post" action="lite"><P><INPUT name="name" type="text" size="5" value="{{ escape(name) }}">{% comment
+%}<INPUT type="submit" value="投稿/更新"><INPUT name="color" type="text" size="2" value="{{ escape(color) }}">{% comment
+%}<INPUT name="count" type="text" size="1" value="{{ escape(count) }}">{% comment
+%}<BR><INPUT name="body" type="text" size="25" style="width:100%"></P></FORM>
+{%
+for msg in messages
+%}<DIV style="color:{{ msg['c'] }}">{{ escape(msg['n']) }}&gt;&nbsp;{%
+  for seg in msg['t']
+%}{%
+    if seg[1]
+%}<A href="{{ seg[1] }}" target="_blank">{{ escape(seg[0]) }}</A>{%
+    else
+%}{{ escape(seg[0]) }}{%
+    end
+%}{%
+  end
+%}({{ escape(msg['d']) }})</DIV><HR>
+{%
+end
+%}</BODY></HTML>

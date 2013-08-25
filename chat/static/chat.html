@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title></title>
+    <script type="text/javascript" src="js/jquery-2.0.3.min.js"></script>
+    <script type="text/javascript" src="js/jquery-ui-1.10.3.custom.min.js"></script>
+    <script type="text/javascript" src="js/chat-config.js"></script>
+    <script type="text/javascript" src="js/chat.js"></script>
+    <script type="text/javascript" src="token.js"></script>
+    <link rel="stylesheet" type="text/css" href="css/ui-lightness/jquery-ui-1.10.3.custom.min.css" />
+    <link rel="stylesheet" type="text/css" href="css/chat.css" />
+  </head>
+  <body>
+    <div id="post_container" class="ui-widget-header">
+      <div id="post_leftcol">
+        <img id="profile_icon" />
+      </div>
+      <div id="post_midcol">
+        <input id="msg_field" type="text" value="" />
+      </div>
+      <div id="post_rightcol">
+        <button id="post_button">送信</button><button id="config_button">設定</button>
+      </div>
+    </div>
+    <div id="msg_container"></div>
+
+    <div id="config_dialog" title="Configuration">
+      <table>
+        <tr>
+          <td>
+            <img style="max-width:128px;max-height:128px;margin-right:1ex" id="config_icon_preview" />
+            <input id="icon_input" type="file" accept="image/*" style="display:none" />
+          </td>
+          <td>
+            <div>Name:</div>
+            <input type="text" size="10" id="config_name" />
+            <div style="margin-top:1ex">Color:</div>
+            <input type="text" size="10" id="config_color" />
+            <div style="margin-top:1ex">
+              <span>Icon:</span>
+              <button id="open_icon_file_button">Open</button>
+              <button id="choose_icon_button">Choose</button>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">アイコンサイズ: <input type="text" size="3" id="config_icon_size" />[em]</td>
+        </tr>
+        <tr>
+          <td colspan="2"><input type="checkbox" id="config_show_my_icon" /><label for="config_show_my_icon">投稿部に自身のアイコンを表示する</label></td>
+        </tr>
+        <tr>
+          <td colspan="2">表示メッセージ数: <input type="text" size="3" id="config_msg_count" /></td>
+        </tr>
+      </table>
+    </div>
+  </body>
+</html>

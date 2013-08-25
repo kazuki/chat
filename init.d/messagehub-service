@@ -1,0 +1,20 @@
+#!/sbin/runscript
+
+PYTHON=python3
+CONFIGFILE=/etc/chat_service.conf
+PIDFILE=/var/run/messagehub-service.pid
+USER=nobody
+
+start() {
+  ebegin "Starting ${SVCNAME}"
+  start-stop-daemon --start --exec ${PYTHON} -b -m --name ${PYTHON} \
+     --pidfile ${PIDFILE} -u ${USER} -- -m chat.messagehub -c ${CONFIGFILE}
+  eend $?
+}
+
+stop() {
+  ebegin "Stopping ${SVCNAME}"
+  start-stop-daemon --stop --exec ${PYTHON} --name ${PYTHON} \
+     --pidfile ${PIDFILE}
+  eend $?
+}
