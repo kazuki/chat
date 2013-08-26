@@ -28,6 +28,7 @@
             self.sock_.send(JSON.stringify({
                 'm': 'auth',
                 'user-id': WebSocketAuthUserID,
+                'nonce': WebSocketAuthNonce,
                 'token': WebSocketAuthToken
             }));
             self.last_ = Date.now();

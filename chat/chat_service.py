@@ -34,7 +34,7 @@ class ChatServiceWebSocketHandler(tornado.websocket.WebSocketHandler):
         if not self.authenticated_user_id:
             if req['m'] == 'auth':
                 user_id = req['user-id']
-                if not WebSocketAuth.verify_token(user_id, self.request, req['token']):
+                if not WebSocketAuth.verify_token(user_id, req['nonce'], self.request, req['token']):
                     raise tornado.web.HTTPError(401)
                 self.authenticated_user_id = user_id
             return
@@ -198,17 +198,16 @@ class BasicAuthProvider(AuthProvider):
         raise tornado.web.HTTPError(401)
 
 class WebSocketAuth(object):
-    def create_token(userid, req):
+    def create_token(userid, nonce, req):
         h = hmac.new(WEBSOCKET_PSK, digestmod = hashlib.sha256)
         h.update(userid.encode('utf-8'))
-        if 'User-Agent' in req.headers:
-            h.update(req.headers['User-Agent'].encode('ascii'))
-        h.update(req.remote_ip.encode('ascii'))
+        h.update(binascii.a2b_base64(nonce.encode('ascii')))
         return binascii.b2a_base64(h.digest()).decode('ascii').strip()
 
-    def verify_token(userid, req, token):
-        token2 = WebSocketAuth.create_token(userid, req)
-        print('verify-token:', token, '=', token2)
+    def verify_token(userid, nonce, req, token):
+        token2 = WebSocketAuth.create_token(userid, nonce, req)
+        if token != token2:
+            print('verify-token failed:', token, '=', token2)
         return token == token2
 
 class WebSocketAuthTokenGenerator(tornado.web.RequestHandler):
@@ -217,8 +216,10 @@ class WebSocketAuthTokenGenerator(tornado.web.RequestHandler):
 
     def get(self):
         userid = self.auth_provider.get_user_id(self.request)
-        token = WebSocketAuth.create_token(userid, self.request)
+        nonce = binascii.b2a_base64(os.urandom(48)).decode('ascii').strip()
+        token = WebSocketAuth.create_token(userid, nonce, self.request)
         self.write('WebSocketAuthUserID = \"' + userid + '\";\r\n')
+        self.write('WebSocketAuthNonce = \"' + nonce + '\";\r\n')
         self.write('WebSocketAuthToken = \"' + token + '\";')
 
 class DefaultStaticHtmlHandler(tornado.web.RequestHandler):
@@ -250,7 +251,7 @@ class ChatService(object):
         if self.chat_config.get('fork', 'False') == 'True':
             tornado.process.fork_processes(0)
         zmq.eventloop.ioloop.install()
-        http_server = tornado.httpserver.HTTPServer(app, xheaders=True)
+        http_server = tornado.httpserver.HTTPServer(app)
         http_server.add_sockets(sockets)
         tornado.ioloop.IOLoop.instance().start()
 
