@@ -349,7 +349,7 @@
 
             if (inactive_) {
                 unread_ ++;
-                document.title = title_ + '[' + unread_ + ']';
+                document.title = '[' + unread_ + '] ' + title_;
             }
         };
         var open_socket = function() {
