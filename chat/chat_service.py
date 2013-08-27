@@ -16,6 +16,7 @@ class ChatServiceWebSocketHandler(tornado.websocket.WebSocketHandler):
         self.auth_provider = auth
         self.persistent = PsycopgPersistentService(config)
         self.authenticated_user_id = None
+        self.enabled_draft76 = (config.get('websocket_draft76', 'false').lower() == 'true')
 
     def open(self):
         print('[ws::open]', self.request.headers)
@@ -107,6 +108,9 @@ class ChatServiceWebSocketHandler(tornado.websocket.WebSocketHandler):
         if not self.authenticated_user_id:
             raise tornado.web.HTTPError(401)
         return self.authenticated_user_id
+
+    def allow_draft76(self):
+        return self.enabled_draft76
 
 class ChatServiceLiteHandler(tornado.web.RequestHandler):
     def initialize(self, config, auth):
