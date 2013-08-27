@@ -4,7 +4,7 @@
         return ("00"+this).slice(-2);
     };
     Date.prototype.toString = function() {
-        return this.getMonth().padding2() + "/"
+        return (this.getMonth() + 1).padding2() + "/"
             + this.getDate().padding2()
             + "[" + "日月火水木金土".charAt(this.getDay()) + "]" + " "
             + this.getHours().padding2() + ":"
