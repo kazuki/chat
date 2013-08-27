@@ -1,9 +1,10 @@
 body{padding:0;margin:0}
 .ui-widget{font-size:90%}
 #post_container{position:fixed;top:0;left:0;background-color:white;z-index:2;width:100%;
-                display:flex;display:-ms-flexbox;-ms-flex-align:center;align-items:center;}
+                display:flex;display:-ms-flexbox;display:-webkit-box;
+                -ms-flex-align:center;align-items:center;-webkit-box-align:center;}
 #profile_icon{padding:0;margin:0;vertical-align:middle;padding:0.2em}
-#post_midcol{flex:auto;-ms-flex:auto;}
+#post_midcol{flex:auto;-ms-flex:auto;-webkit-box-flex:1;}
 #post_midcol > input{width:100%}
 #post_rightcol {margin:0 0.2em 0 8px}
 #post_rightcol > button{margin:0;height:1.5em;width:1.5em;}
