@@ -113,12 +113,16 @@
         var LOCALSTORAGE_ICON_SIZE = "icon-size";
         var LOCALSTORAGE_SHOW_MY_ICON = 'show-my-icon';
         var LOCALSTORAGE_MSG_COUNT = 'msg-count';
+        var LOCALSTORAGE_FONTS = 'fonts';
+        var LOCALSTORAGE_FONT_SIZE = 'font-size';
         var fetch_localstorage_name = function() { return localStorage.getItem(LOCALSTORAGE_NAME) || DEFAULT_NAME; };
         var fetch_localstorage_color = function() { return localStorage.getItem(LOCALSTORAGE_COLOR) || DEFAULT_COLOR; };
         var fetch_localstorage_icon = function() { return localStorage.getItem(LOCALSTORAGE_ICON) ? DEFAULT_IMAGE_HASH_URL + localStorage.getItem(LOCALSTORAGE_ICON) : DEFAULT_ICON_URL; };
         var fetch_localstorage_icon_size = function() { return parseFloat(localStorage.getItem(LOCALSTORAGE_ICON_SIZE) || DEFAULT_ICON_SIZE); };
         var fetch_localstorage_show_my_icon = function() { return (localStorage.getItem(LOCALSTORAGE_SHOW_MY_ICON) || 'true') == 'true'; };
         var fetch_localstorage_msg_count = function() { return parseFloat(localStorage.getItem(LOCALSTORAGE_MSG_COUNT) || DEFAULT_MSG_COUNT); };
+        var fetch_localstorage_fonts = function() { return localStorage.getItem(LOCALSTORAGE_FONTS) || ''; };
+        var fetch_localstorage_font_size = function() { return parseFloat(localStorage.getItem(LOCALSTORAGE_FONT_SIZE) || 1.0); };
 
         var max_view_messages_ = fetch_localstorage_msg_count(); // 最大表示チャットログ行数
 
@@ -160,12 +164,20 @@
                 $('#config_name').val(fetch_localstorage_name());
                 $('#config_color').val(fetch_localstorage_color());
                 $('#config_icon_preview').attr('src', fetch_localstorage_icon());
+                $('#config_show_my_icon').prop('checked',fetch_localstorage_show_my_icon());
+                $('#config_icon_size').spinner('value', fetch_localstorage_icon_size());
+                $('#config_msg_count').spinner('value', fetch_localstorage_msg_count());
+                $('#config_font').val(fetch_localstorage_fonts());
+                $('#config_font_size').spinner('value', fetch_localstorage_font_size());
             },
             buttons: {
                 'Save': function() {
                     localStorage.setItem(LOCALSTORAGE_NAME, $('#config_name').val());
                     localStorage.setItem(LOCALSTORAGE_COLOR, $('#config_color').val());
                     localStorage.setItem(LOCALSTORAGE_SHOW_MY_ICON, $('#config_show_my_icon').prop('checked') ? 'true' : 'false');
+                    if (!isNaN(parseFloat($('#config_font_size').val())))
+                        localStorage.setItem(LOCALSTORAGE_FONT_SIZE, parseFloat($('#config_font_size').val() + ''));
+                    localStorage.setItem(LOCALSTORAGE_FONTS, $('#config_font').val());
                     var new_icon = $('#config_icon_preview').attr('src');
                     if (new_icon.substr(0, 11) === 'data:image/') {
                         var pos1 = new_icon.indexOf(',');
@@ -215,6 +227,8 @@
                             remove_messages();
                         }
                     }
+                    apply_fonts();
+                    $(window).resize();
                     $(this).dialog("close");
                 },
                 'Cancel': function() {
@@ -226,9 +240,18 @@
         $('#choose_icon_button').button({icons:{primary:"ui-icon-image"},text:false}).click(function() {
             alert('未実装！すでにサーバサイドにアップロード済みのアイコン一覧から選択する機能を実装する...予定');
         });
-        $('#config_icon_size').spinner({step:0.1,min:0,max:10}).spinner('value', fetch_localstorage_icon_size());
-        $('#config_show_my_icon').prop('checked',fetch_localstorage_show_my_icon());
-        $('#config_msg_count').spinner({step:1,min:1,max:10000}).spinner('value', fetch_localstorage_msg_count());
+        $('#config_icon_size').spinner({step:0.1,min:0,max:10});
+        $('#config_msg_count').spinner({step:1,min:1,max:10000});
+        $('#config_font_size').spinner({step:0.1,min:0.1,max:10});
+        var apply_fonts = function() {
+            $('.ui-widget').css('font-size', fetch_localstorage_font_size() + 'em')
+                .css('font-family', fetch_localstorage_fonts());
+            $('#post_midcol > input').css('font-size', fetch_localstorage_font_size() + 'em')
+                .css('font-family', fetch_localstorage_fonts());
+            $('#msg_container').css('font-size', fetch_localstorage_font_size() + 'em')
+                .css('font-family', fetch_localstorage_fonts());
+        };
+        apply_fonts ();
 
         var change_ws_status = function(is_connected) {
             if (is_connected) {
