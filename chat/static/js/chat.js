@@ -1,4 +1,17 @@
 (function(global) {
+
+    Number.prototype.padding2 = function() {
+        return ("00"+this).slice(-2);
+    };
+    Date.prototype.toString = function() {
+        return this.getMonth().padding2() + "/"
+            + this.getDate().padding2()
+            + "[" + "日月火水木金土".charAt(this.getDay()) + "]" + " "
+            + this.getHours().padding2() + ":"
+            + this.getMinutes().padding2() + ":"
+            + this.getSeconds().padding2();
+    };
+
     var ws_server_url = (window.location.protocol === 'http:' ? 'ws://' : 'wss://')
         + window.location.host
         + window.location.pathname.substr(0, window.location.pathname.lastIndexOf('/'))
@@ -301,9 +314,7 @@
                 msg.t = msg.t.replace(entry[0], entry[1]);
             });
             append_txt(txt, msg.t);
-            txt.append($(document.createTextNode(" (" + (dt.getMonth()+1) + "/" + dt.getDate()
-                                                 + "[" + "日月火水木金土".charAt(dt.getDay()) + "]" + " "
-                                                 + dt.getHours() + ":" + dt.getMinutes() + ":" + dt.getSeconds() + ")")));
+            txt.append($(document.createTextNode(" (" + dt.toString() + ")")));
             txt.appendTo(e0);
             if (msg_container.children().size() == 0) {
                 e0.appendTo(msg_container);
@@ -371,7 +382,7 @@
                 var reader = new FileReader();
                 reader.onload = function() {
                     $('#config_icon_preview').attr('src', reader.result);
-                }
+                };
                 reader.readAsDataURL(file);
             });
             $('#icon_input').click();
