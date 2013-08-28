@@ -160,6 +160,7 @@
         $('#config_dialog').dialog({
             autoOpen: false,
             modal: true,
+            width: 'auto',
             open: function(event, ui) {
                 $('#config_name').val(fetch_localstorage_name());
                 $('#config_color').val(fetch_localstorage_color());
@@ -244,9 +245,7 @@
         $('#config_msg_count').spinner({step:1,min:1,max:10000});
         $('#config_font_size').spinner({step:0.1,min:0.1,max:10});
         var apply_fonts = function() {
-            $('.ui-widget').css('font-size', fetch_localstorage_font_size() + 'em')
-                .css('font-family', fetch_localstorage_fonts());
-            $('#post_midcol > input').css('font-size', fetch_localstorage_font_size() + 'em')
+            $('#post_container').css('font-size', fetch_localstorage_font_size() + 'em')
                 .css('font-family', fetch_localstorage_fonts());
             $('#msg_container').css('font-size', fetch_localstorage_font_size() + 'em')
                 .css('font-family', fetch_localstorage_fonts());
