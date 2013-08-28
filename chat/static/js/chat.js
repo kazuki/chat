@@ -1,5 +1,4 @@
 (function(global) {
-
     Number.prototype.padding2 = function() {
         return ("00"+this).slice(-2);
     };
@@ -131,10 +130,10 @@
         var post_container = $('#post_container');
         var ws_status = $(document.createElement('div')).appendTo($(document.body)).attr('id', 'ws_status').addClass('ui-widget-overlay');
         var ws_status_msg = function() {
-            tmp1 = $(document.createElement('div')).appendTo($(document.body)).attr('id', 'ws_status_msg').addClass('ui-widget');
-            tmp2 = $(document.createElement('div')).appendTo(tmp1).addClass('ui-state-error').addClass('ui-corner-all')
+            var tmp = $(document.createElement('div')).appendTo($(document.body)).attr('id', 'ws_status_msg').addClass('ui-widget');
+            $(document.createElement('div')).appendTo(tmp).addClass('ui-state-error').addClass('ui-corner-all')
                 .html('<div><span class="ui-icon ui-icon-alert" style="float:left;margin-right:.3em;"></span>Disconnected WebSocket...</div>');
-            return tmp1;
+            return tmp;
         } ();
         var post_button = $('#post_button');
         var msg_field   = $('#msg_field');
