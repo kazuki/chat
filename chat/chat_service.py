@@ -190,9 +190,7 @@ class HashedImageHandler(tornado.web.RequestHandler):
                     img.compression_quality = 95
                     binary = img.make_blob('jpeg')
                     mime_type = 'image/jpeg'
-            except:
-                raise
-                #pass # エラーが起きた場合はオリジナルサイズで返却
+            except: pass # エラーが起きた場合はオリジナルサイズで返却
         self.set_header("Content-Type", mime_type)
         self.write(binary)
 
