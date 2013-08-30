@@ -152,7 +152,7 @@
                 document.title = title_;
             }
         });
-        $('#profile_icon').attr('src', fetch_localstorage_icon())
+        $('#profile_icon')
             .css('max-height', fetch_localstorage_icon_size() + 'em').css('max-width', fetch_localstorage_icon_size() + 'em')
             .css('display', fetch_localstorage_show_my_icon() ? 'inline' : 'none');
         $('#post_button').button({icons:{primary:'ui-icon-comment'},text:false});
@@ -256,6 +256,7 @@
             icon_max_size_ = tmp.height();
             tmp.detach();
 
+            $('#profile_icon').attr('src', fetch_localstorage_icon() + '?s=' + icon_max_size_)
             msg_container.find('img').each(function(idx, img) {
                 var url = img.src;
                 if (url.indexOf('?') > 0)
