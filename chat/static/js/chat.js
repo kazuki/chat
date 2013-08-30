@@ -104,6 +104,7 @@
         var title_ = config_.Title || 'チャット';
         var unread_ = 0;
         var inactive_ = false;
+        var icon_max_size_ = null;
 
         /* localStorage キー */
         var LOCALSTORAGE_NAME = "name";
@@ -227,7 +228,7 @@
                             remove_messages();
                         }
                     }
-                    apply_fonts();
+                    apply_fonts_and_icon_size();
                     $(window).resize();
                     $(this).dialog("close");
                 },
@@ -243,13 +244,26 @@
         $('#config_icon_size').spinner({step:0.1,min:0,max:10});
         $('#config_msg_count').spinner({step:1,min:1,max:10000});
         $('#config_font_size').spinner({step:0.1,min:0.1,max:10});
-        var apply_fonts = function() {
+        var apply_fonts_and_icon_size = function() {
             $('#post_container').css('font-size', fetch_localstorage_font_size() + 'em')
                 .css('font-family', fetch_localstorage_fonts());
             $('#msg_container').css('font-size', fetch_localstorage_font_size() + 'em')
                 .css('font-family', fetch_localstorage_fonts());
+
+            // emからpxサイズを取得 (他にいい方法あればいいな...)
+            var tmp = $(document.createElement('div')).css('font-size', fetch_localstorage_icon_size() + 'em')
+                .css('display', 'none').text('Aa').appendTo($(document.body))
+            icon_max_size_ = tmp.height();
+            tmp.detach();
+
+            msg_container.find('img').each(function(idx, img) {
+                var url = img.src;
+                if (url.indexOf('?') > 0)
+                    url = url.substring(0, url.indexOf('?'));
+                img.src = url + '?s=' + icon_max_size_;
+            });
         };
-        apply_fonts ();
+        apply_fonts_and_icon_size ();
 
         var change_ws_status = function(is_connected) {
             if (is_connected) {
@@ -325,7 +339,7 @@
                 .addClass('ui-widget-content').addClass('message-content');
             var dt = new Date(msg.d);
             msg.g = (msg.g ? DEFAULT_IMAGE_HASH_URL + msg.g : DEFAULT_ICON_URL);
-            img = $(document.createElement('img')).attr('src', msg.g)
+            img = $(document.createElement('img')).attr('src', msg.g + '?s=' + icon_max_size_)
                 .css('max-height', fetch_localstorage_icon_size() + 'em').css('max-width', fetch_localstorage_icon_size() + 'em')
                 .appendTo(e0);
             if (fetch_localstorage_icon_size() + '' == '0') img.css('display', 'none');

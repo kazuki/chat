@@ -178,10 +178,21 @@ class HashedImageHandler(tornado.web.RequestHandler):
         self.persistent = PsycopgPersistentService(config)
 
     def get(self, image_hash):
-        print(image_hash)
         binary, mime_type = self.persistent.fetch_icon(binascii.a2b_hex(image_hash.encode('ascii')))
-        print(type(binary), mime_type)
         if not binary: raise tornado.web.HTTPError(404)
+        if self.get_argument('s', None):
+            try:
+                max_size = int(self.get_argument('s'))
+                import wand.image
+                with wand.image.Image(blob = binary) as img:
+                    scale = max_size / max(img.width, img.height)
+                    img.resize(int(img.width * scale), int(img.height * scale))
+                    img.compression_quality = 95
+                    binary = img.make_blob('jpeg')
+                    mime_type = 'image/jpeg'
+            except:
+                raise
+                #pass # エラーが起きた場合はオリジナルサイズで返却
         self.set_header("Content-Type", mime_type)
         self.write(binary)
 
