@@ -181,6 +181,7 @@ class HashedImageHandler(tornado.web.RequestHandler):
         self.cache_key = None
         self.original_image = None
         self.max_size = None
+        self.sub_process = None
 
     @tornado.web.asynchronous
     def get(self, image_hash):
@@ -219,21 +220,23 @@ class HashedImageHandler(tornado.web.RequestHandler):
     def _convert_process(self, src_blob, size):
         args = ['convert', '-resize', str(size) + 'x' + str(size), '-quality', '95', '-', 'jpeg:-']
         STREAM = tornado.process.Subprocess.STREAM
-        sub_process = tornado.process.Subprocess(
+        self.sub_process = tornado.process.Subprocess(
             args, stdin=STREAM, stdout=STREAM, stderr=STREAM
         )
-        sub_process.stdin.write(src_blob)
-        sub_process.stdin.close()
-        sub_process.stdout.read_until_close(self._on_convert_finished)
-
+        self.sub_process.stdin.write(src_blob, self._on_convert_written)
+    def _on_convert_written(self):
+        self.sub_process.stdin.close()
+        self.sub_process.stdout.read_until_close(self._on_convert_finished)
     def _on_convert_finished(self, blob):
+        try:
+            self.sub_process.terminate()
+        except: pass
         self.mc_strm.write(('set ' + self.cache_key + ' 0 0 ' + str(len(blob)) + '\r\n').encode('ascii'))
         self.mc_strm.write(blob)
         self.mc_strm.write(b'\r\n')
         self.write(blob)
         self.mc_strm.read_until(b'\r\n', self._mc_read_set_response)
     def _mc_read_set_response(self, response):
-        print(response)
         self.finish()
         self.mc_strm.close()
 
