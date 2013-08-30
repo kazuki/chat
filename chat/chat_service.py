@@ -1,7 +1,8 @@
-import abc, base64, configparser, json, hashlib, hmac, datetime, binascii, os.path, urllib.parse, re
-import tornado.ioloop, tornado.web, tornado.websocket, tornado.httpserver
+import abc, base64, configparser, json, hashlib, hmac, datetime, binascii, os.path
+import urllib.parse, re, optparse, socket
+
+import tornado.ioloop, tornado.web, tornado.websocket, tornado.httpserver, tornado.iostream
 import zmq, zmq.eventloop.ioloop, zmq.eventloop.zmqstream
-import optparse
 
 from chat.persistent_service import PsycopgPersistentService
 
@@ -176,23 +177,65 @@ class HashedImageHandler(tornado.web.RequestHandler):
         self.config = config
         self.auth_provider = auth
         self.persistent = PsycopgPersistentService(config)
+        self.mc_strm = None
+        self.cache_key = None
+        self.original_image = None
+        self.max_size = None
 
+    @tornado.web.asynchronous
     def get(self, image_hash):
         binary, mime_type = self.persistent.fetch_icon(binascii.a2b_hex(image_hash.encode('ascii')))
         if not binary: raise tornado.web.HTTPError(404)
         if self.get_argument('s', None):
-            try:
-                max_size = int(self.get_argument('s'))
-                import wand.image
-                with wand.image.Image(blob = binary) as img:
-                    scale = max_size / max(img.width, img.height)
-                    img.resize(int(img.width * scale), int(img.height * scale))
-                    img.compression_quality = 95
-                    binary = img.make_blob('jpeg')
-                    mime_type = 'image/jpeg'
-            except: pass # エラーが起きた場合はオリジナルサイズで返却
+            max_size = int(self.get_argument('s'))
+            self.set_header("Content-Type", 'image/jpeg')
+            self.cache_key = image_hash + '-' + str(max_size)
+            self.original_image = binary
+            self.max_size = max_size
+            self.mc_strm = tornado.iostream.IOStream(socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0))
+            self.mc_strm.connect(('127.0.0.1', 11211), self._mc_connected)
+            return
         self.set_header("Content-Type", mime_type)
         self.write(binary)
+        self.finish()
+
+    def _mc_connected(self):
+        self.mc_strm.write(('get ' + self.cache_key + '\r\n').encode('ascii'))
+        self.mc_strm.read_until(b'\r\n', self._mc_read_header)
+    def _mc_read_header(self, header):
+        if len(header) == 5 and header[0:3] == b'END':
+            self._convert_process(self.original_image, self.max_size)
+        elif len(header) > 6 and header[0:6] == b'VALUE ':
+            header = header[6 + len(self.cache_key) + 1:]
+            header = header[header.index(b' ')+1:]
+            body_size = int(header[:len(header)-2].decode('ascii'))
+            self.mc_strm.read_bytes(body_size, self._mc_read_body)
+        else:
+            raise tornado.web.HTTPError(500)
+    def _mc_read_body(self, body):
+        self.write(body)
+        self.finish()
+        self.mc_strm.close()
+    def _convert_process(self, src_blob, size):
+        args = ['convert', '-resize', str(size) + 'x' + str(size), '-quality', '95', '-', 'jpeg:-']
+        STREAM = tornado.process.Subprocess.STREAM
+        sub_process = tornado.process.Subprocess(
+            args, stdin=STREAM, stdout=STREAM, stderr=STREAM
+        )
+        sub_process.stdin.write(src_blob)
+        sub_process.stdin.close()
+        sub_process.stdout.read_until_close(self._on_convert_finished)
+
+    def _on_convert_finished(self, blob):
+        self.mc_strm.write(('set ' + self.cache_key + ' 0 0 ' + str(len(blob)) + '\r\n').encode('ascii'))
+        self.mc_strm.write(blob)
+        self.mc_strm.write(b'\r\n')
+        self.write(blob)
+        self.mc_strm.read_until(b'\r\n', self._mc_read_set_response)
+    def _mc_read_set_response(self, response):
+        print(response)
+        self.finish()
+        self.mc_strm.close()
 
 class AuthProvider(object):
     __metaclass__ = abc.ABCMeta
