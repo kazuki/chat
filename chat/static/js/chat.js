@@ -129,9 +129,9 @@
         /* HTMLノード保持変数 */
         var msg_container = $('#msg_container');
         var post_container = $('#post_container');
-        var ws_status = $(document.createElement('div')).appendTo($(document.body)).attr('id', 'ws_status').addClass('ui-widget-overlay');
+        var ws_status = $(document.createElement('div')).appendTo($(document.body)).attr('id', 'ws_status').addClass('ui-widget-overlay').css('display','none');
         var ws_status_msg = function() {
-            var tmp = $(document.createElement('div')).appendTo($(document.body)).attr('id', 'ws_status_msg').addClass('ui-widget');
+            var tmp = $(document.createElement('div')).appendTo($(document.body)).attr('id', 'ws_status_msg').addClass('ui-widget').css('display','none');
             $(document.createElement('div')).appendTo(tmp).addClass('ui-state-error').addClass('ui-corner-all')
                 .html('<div><span class="ui-icon ui-icon-alert" style="float:left;margin-right:.3em;"></span>Disconnected WebSocket...</div>');
             return tmp;
@@ -271,9 +271,7 @@
                 ws_status.css('display', 'none');
                 ws_status_msg.css('display', 'none');
             } else {
-                ws_status.height(post_container.outerHeight(true));
-                ws_status_msg.css('top', ((post_container.outerHeight(true) - ws_status_msg.outerHeight(true)) / 2) + 'px');
-                ws_status_msg.css('left', ((post_container.outerWidth(true) - ws_status_msg.outerWidth(true)) / 2) + 'px');
+                $(window).resize();
                 ws_status.css('display', 'block');
                 ws_status_msg.css('display', 'block');
             }
@@ -425,6 +423,9 @@
         });
         $(window).resize(function() {
             $('#msg_container').css('margin-top', post_container.outerHeight(true));
+            ws_status.height(post_container.outerHeight(true));
+            ws_status_msg.css('top', ((post_container.outerHeight(true) - ws_status_msg.outerHeight(true)) / 2) + 'px');
+            ws_status_msg.css('left', ((post_container.outerWidth(true) - ws_status_msg.outerWidth(true)) / 2) + 'px');
         });
         msg_field.keypress(function(event) {
             if (event.which == 13) {
