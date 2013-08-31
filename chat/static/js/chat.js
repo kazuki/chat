@@ -295,21 +295,14 @@
                     e.attr('rel', 'noreferrer');
                     e.attr('href', url);
                     e.attr('target', '_blank');
-                } else if (/*@cc_on!@*/false /*IE*/) {
+                } else {
                     e.click(function () {
                         w = window.open ();
                         w.document.write ('<meta http-equiv="refresh" content="0;url=' + url + '">');
-                        w.document.write ('<meta http-equiv="referer" content="hoge">');
                         w.document.close ();
                         return false;
                     });
                     e.attr('href', url);
-                } else {
-                    var html = '<html><head><script type="text/javascript"><!--\n'
-                        + 'document.write(\'<meta http-equiv="refresh" content="0;url=' + url + '">\');'
-                        + '// --></script></head><body></body></html>';
-                    e.attr('href', 'data:text/html;charset=utf-8,' + encodeURIComponent (html));
-                    e.attr('target', '_blank');
                 }
                 return e.text(text);
             };
