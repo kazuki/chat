@@ -18,6 +18,7 @@ start() {
 
 stop() {
   ebegin "Stopping ${SVCNAME}"
+  pkill -TERM -P `cat ${PIDFILE}`
   start-stop-daemon --stop --exec ${PYTHON} --name ${PYTHON} \
      --pidfile ${PIDFILE}
   eend $?
