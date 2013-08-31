@@ -267,6 +267,7 @@
         apply_fonts_and_icon_size ();
 
         var change_ws_status = function(is_connected) {
+            post_button.button({disabled: !is_connected});
             if (is_connected) {
                 ws_status.css('display', 'none');
                 ws_status_msg.css('display', 'none');
