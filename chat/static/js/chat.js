@@ -91,7 +91,7 @@
         /* 初期値 */
         var DEFAULT_NAME = config_.DefaultName || "名無し"; // 名前の初期値
         var DEFAULT_COLOR = config_.DefaultColor || "black"; // 色の初期値
-        var DEFAULT_ICON_URL = config_.DefaultIcon || "img/no-image.png"; // アイコン初期URL
+        var DEFAULT_ICON_URL = config_.DefaultIcon || "img/no-image.min.svg"; // アイコン初期URL
         var DEFAULT_IMAGE_HASH_URL = config_.DefaultImageHashUrl || "hash/";
         var DEFAULT_ICON_SIZE = config_.DefaultIconSize || 1.2;
         var DEFAULT_MSG_COUNT = config_.DefaultMsgCount || 50;
