@@ -313,6 +313,7 @@
                     return;
                 }
                 var url = tmp[0], suffix = tmp[1], lnk_text = try_decode_uri(tmp[0]);
+                var ctxL = RegExp.leftContext, ctxR = RegExp.rightContext;
                 for (var i = 0; i < config_linkmap_.length; ++i) {
                     var map_entry = config_linkmap_[i];
                     if (suffix.length < map_entry[0].length) continue;
@@ -321,9 +322,9 @@
                         break;
                     }
                 }
-                ele.append ($(document.createTextNode (RegExp.leftContext)))
+                ele.append ($(document.createTextNode (ctxL)))
                     .append(create_link_element(url, lnk_text));
-                txt = RegExp.rightContext;
+                txt = ctxR;
             }
         };
         var append_msg = function(msg) {
