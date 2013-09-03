@@ -315,12 +315,18 @@ class ChatService(object):
             (r"/", DefaultStaticHtmlHandler),
             (r"/(.*)", tornado.web.StaticFileHandler, {"path": os.path.join(rootdir, "static")})
         ])
-        sockets = tornado.netutil.bind_sockets(self.chat_config.get('port', 8888))
+        if self.chat_config.get('unix_sock', None):
+            sockets = tornado.netutil.bind_unix_socket(self.chat_config.get('unix_sock', None), mode = 0o666)
+        else:
+            sockets = tornado.netutil.bind_sockets(self.chat_config.get('port', 8888))
         if self.chat_config.get('fork', 'False') == 'True':
             tornado.process.fork_processes(0)
         zmq.eventloop.ioloop.install()
         http_server = tornado.httpserver.HTTPServer(app)
-        http_server.add_sockets(sockets)
+        if isinstance(sockets, list):
+            http_server.add_sockets(sockets)
+        else:
+            http_server.add_socket(sockets)
         tornado.ioloop.IOLoop.instance().start()
 
 def main():
