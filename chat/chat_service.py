@@ -177,35 +177,41 @@ class HashedImageHandler(tornado.web.RequestHandler):
         self.config = config
         self.auth_provider = auth
         self.persistent = PsycopgPersistentService(config)
-        self.mc_strm = None
+        self.image_key = None
         self.cache_key = None
-        self.original_image = None
         self.max_size = None
+        self.mc_strm = None
         self.sub_process = None
 
     @tornado.web.asynchronous
     def get(self, image_hash):
-        binary, mime_type = self.persistent.fetch_icon(binascii.a2b_hex(image_hash.encode('ascii')))
-        if not binary: raise tornado.web.HTTPError(404)
+        self.image_key = image_hash
+        self.cache_key = image_hash
         if self.get_argument('s', None):
             max_size = int(self.get_argument('s'))
             self.set_header("Content-Type", 'image/jpeg')
-            self.cache_key = image_hash + '-' + str(max_size)
-            self.original_image = binary
+            self.cache_key = self.image_key + '-' + str(max_size)
             self.max_size = max_size
             self.mc_strm = tornado.iostream.IOStream(socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0))
             self.mc_strm.connect(('127.0.0.1', 11211), self._mc_connected)
             return
+        binary, mime_type = self._fetch_persistent_db()
+        if not binary: raise tornado.web.HTTPError(404)
         self.set_header("Content-Type", mime_type)
         self.write(binary)
         self.finish()
+
+    def _fetch_persistent_db(self):
+        return self.persistent.fetch_icon(binascii.a2b_hex(self.image_key.encode('ascii')))
 
     def _mc_connected(self):
         self.mc_strm.write(('get ' + self.cache_key + '\r\n').encode('ascii'))
         self.mc_strm.read_until(b'\r\n', self._mc_read_header)
     def _mc_read_header(self, header):
         if len(header) == 5 and header[0:3] == b'END':
-            self._convert_process(self.original_image, self.max_size)
+            blob, mime_type = self._fetch_persistent_db()
+            if not blob: raise tornado.web.HTTPError(404)
+            self._convert_process(blob, self.max_size)
         elif len(header) > 6 and header[0:6] == b'VALUE ':
             header = header[6 + len(self.cache_key) + 1:]
             header = header[header.index(b' ')+1:]
@@ -239,6 +245,9 @@ class HashedImageHandler(tornado.web.RequestHandler):
     def _mc_read_set_response(self, response):
         self.finish()
         self.mc_strm.close()
+
+    def compute_etag(self):
+        return self.cache_key
 
 class AuthProvider(object):
     __metaclass__ = abc.ABCMeta
