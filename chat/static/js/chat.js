@@ -251,10 +251,13 @@
                 .css('font-family', fetch_localstorage_fonts());
 
             // emからpxサイズを取得 (他にいい方法あればいいな...)
-            var tmp = $(document.createElement('div')).css('font-size', fetch_localstorage_icon_size() + 'em')
-                .css('display', 'none').text('Aa').appendTo($(document.body))
-            icon_max_size_ = tmp.height();
-            tmp.detach();
+            var tmp0 = $(document.createElement('div')).css('font-size', fetch_localstorage_font_size() + 'em')
+                .css('display', 'none').appendTo($(document.body));
+            var tmp1 = $(document.createElement('div')).css('font-size', fetch_localstorage_icon_size() + 'em')
+                .text('M').appendTo(tmp0);
+            icon_max_size_ = tmp0.height();
+            console.log(tmp0.height() + ", " + tmp1.height());
+            tmp0.detach();
 
             $('#profile_icon').attr('src', fetch_localstorage_icon() + '?s=' + icon_max_size_)
             msg_container.find('img').each(function(idx, img) {
