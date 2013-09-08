@@ -263,7 +263,6 @@
             var tmp1 = $(document.createElement('div')).css('font-size', fetch_localstorage_icon_size() + 'em')
                 .text('M').appendTo(tmp0);
             icon_max_size_ = tmp0.height();
-            console.log(tmp0.height() + ", " + tmp1.height());
             tmp0.detach();
 
             $('#profile_icon').attr('src', fetch_localstorage_icon() + '?s=' + icon_max_size_)
@@ -386,13 +385,10 @@
                 });
             };
             sock_.onmessage = function(ev) {
-                if ('m' in ev) {
-                    if (ev.m === 'strm') {
-                        append_msg(ev.d);
-                        return;
-                    }
-                }
                 console.log(ev);
+                if (ev.m === 'c') {
+                    append_msg(ev.d);
+                }
             };
             sock_.onclose = function() {
                 change_ws_status(false);
