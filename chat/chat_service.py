@@ -211,7 +211,11 @@ class HashedImageHandler(tornado.web.RequestHandler):
         if len(header) == 5 and header[0:3] == b'END':
             blob, mime_type = self._fetch_persistent_db()
             if not blob: raise tornado.web.HTTPError(404)
-            self._convert_process(blob, self.max_size)
+            if mime_type in ('image/jpeg', 'image/gif', 'image/png'):
+                self._convert_process(blob, self.max_size)
+            else:
+                self.set_header("Content-Type", mime_type)
+                self._mc_read_body(blob)
         elif len(header) > 6 and header[0:6] == b'VALUE ':
             header = header[6 + len(self.cache_key) + 1:]
             header = header[header.index(b' ')+1:]
