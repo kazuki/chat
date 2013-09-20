@@ -366,8 +366,8 @@
             if (inactive_) {
                 unread_ ++;
                 document.title = '[' + unread_ + '] ' + title_;
-                if (Notification && fetch_localstorage_enable_new_msg_notification()) {
-                    new Notification(msg.n, {tag: 'new-msg-notification',
+                if (window.Notification && fetch_localstorage_enable_new_msg_notification()) {
+                    new window.Notification(msg.n, {tag: 'new-msg-notification',
                                              body: msg.t,
                                              icon: msg.g});
                 }
@@ -405,13 +405,13 @@
             var disable_notification = function() {
                 localStorage.setItem(LOCALSTORAGE_ENABLE_NEW_MSG_NOTIFICATION, 'false');
             };
-            if (!Notification) {
+            if (!window.Notification) {
                 disable_notification();
                 return;
             }
-            Notification.requestPermission(function (status) {
-                if (Notification.permission !== status)
-                    Notification.permission = status;
+            window.Notification.requestPermission(function (status) {
+                if (window.Notification.permission !== status)
+                    window.Notification.permission = status;
                 if (status == 'denied')
                     disable_notification();
             });
