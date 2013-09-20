@@ -115,6 +115,7 @@
         var LOCALSTORAGE_MSG_COUNT = 'msg-count';
         var LOCALSTORAGE_FONTS = 'fonts';
         var LOCALSTORAGE_FONT_SIZE = 'font-size';
+        var LOCALSTORAGE_ENABLE_NEW_MSG_NOTIFICATION = 'new-msg-notification';
         var fetch_localstorage_name = function() { return localStorage.getItem(LOCALSTORAGE_NAME) || DEFAULT_NAME; };
         var fetch_localstorage_color = function() { return localStorage.getItem(LOCALSTORAGE_COLOR) || DEFAULT_COLOR; };
         var fetch_localstorage_icon = function() { return localStorage.getItem(LOCALSTORAGE_ICON) ? DEFAULT_IMAGE_HASH_URL + localStorage.getItem(LOCALSTORAGE_ICON) : DEFAULT_ICON_URL; };
@@ -123,6 +124,9 @@
         var fetch_localstorage_msg_count = function() { return parseFloat(localStorage.getItem(LOCALSTORAGE_MSG_COUNT) || DEFAULT_MSG_COUNT); };
         var fetch_localstorage_fonts = function() { return localStorage.getItem(LOCALSTORAGE_FONTS) || ''; };
         var fetch_localstorage_font_size = function() { return parseFloat(localStorage.getItem(LOCALSTORAGE_FONT_SIZE) || 1.0); };
+        var fetch_localstorage_enable_new_msg_notification = function() { return (localStorage.getItem(LOCALSTORAGE_ENABLE_NEW_MSG_NOTIFICATION) || 'false') == 'true'; };
+        console.log(localStorage.getItem(LOCALSTORAGE_ENABLE_NEW_MSG_NOTIFICATION));
+        console.log(fetch_localstorage_enable_new_msg_notification() ? 'true' : 'false');
 
         var max_view_messages_ = fetch_localstorage_msg_count(); // 最大表示チャットログ行数
 
@@ -170,12 +174,15 @@
                 $('#config_msg_count').spinner('value', fetch_localstorage_msg_count());
                 $('#config_font').val(fetch_localstorage_fonts());
                 $('#config_font_size').spinner('value', fetch_localstorage_font_size());
+                $('#config_enable_new_msg_notification').prop('checked',fetch_localstorage_enable_new_msg_notification());
             },
             buttons: {
                 'Save': function() {
                     localStorage.setItem(LOCALSTORAGE_NAME, $('#config_name').val());
                     localStorage.setItem(LOCALSTORAGE_COLOR, $('#config_color').val());
                     localStorage.setItem(LOCALSTORAGE_SHOW_MY_ICON, $('#config_show_my_icon').prop('checked') ? 'true' : 'false');
+                    localStorage.setItem(LOCALSTORAGE_ENABLE_NEW_MSG_NOTIFICATION, $('#config_enable_new_msg_notification').prop('checked') ? 'true' : 'false');
+                    if (fetch_localstorage_enable_new_msg_notification()) request_web_notifications_permission();
                     if (!isNaN(parseFloat($('#config_font_size').val())))
                         localStorage.setItem(LOCALSTORAGE_FONT_SIZE, parseFloat($('#config_font_size').val() + ''));
                     localStorage.setItem(LOCALSTORAGE_FONTS, $('#config_font').val());
@@ -359,6 +366,11 @@
             if (inactive_) {
                 unread_ ++;
                 document.title = '[' + unread_ + '] ' + title_;
+                if (Notification && fetch_localstorage_enable_new_msg_notification()) {
+                    new Notification(msg.n, {tag: 'new-msg-notification',
+                                             body: msg.t,
+                                             icon: msg.g});
+                }
             }
         };
         var open_socket = function() {
@@ -388,6 +400,21 @@
                     open_socket();
                 }, 1000);
             };
+        };
+        var request_web_notifications_permission = function() {
+            var disable_notification = function() {
+                localStorage.setItem(LOCALSTORAGE_ENABLE_NEW_MSG_NOTIFICATION, 'false');
+            };
+            if (!Notification) {
+                disable_notification();
+                return;
+            }
+            Notification.requestPermission(function (status) {
+                if (Notification.permission !== status)
+                    Notification.permission = status;
+                if (status == 'denied')
+                    disable_notification();
+            });
         };
 
         post_button.click(function() {
@@ -438,6 +465,9 @@
         $(window).resize();
 
         msg_field.focus();
+
+        if (fetch_localstorage_enable_new_msg_notification())
+            request_web_notifications_permission();
 
         // TODO: レイアウト問題に対処するためのおまじない...
         window.setTimeout(function() { $(window).resize(); }, 1);
