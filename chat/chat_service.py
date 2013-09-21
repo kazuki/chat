@@ -182,6 +182,7 @@ class HashedImageHandler(tornado.web.RequestHandler):
         self.max_size = None
         self.mc_strm = None
         self.sub_process = None
+        self.mime_type = None
 
     @tornado.web.asynchronous
     def get(self, image_hash):
@@ -189,7 +190,7 @@ class HashedImageHandler(tornado.web.RequestHandler):
         self.cache_key = image_hash
         if self.get_argument('s', None):
             max_size = int(self.get_argument('s'))
-            self.set_header("Content-Type", 'image/jpeg')
+            self.mime_type = 'image/jpeg'
             self.cache_key = self.image_key + '-' + str(max_size)
             self.max_size = max_size
             self.mc_strm = tornado.iostream.IOStream(socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0))
@@ -197,9 +198,14 @@ class HashedImageHandler(tornado.web.RequestHandler):
             return
         binary, mime_type = self._fetch_persistent_db()
         if not binary: raise tornado.web.HTTPError(404)
-        self.set_header("Content-Type", mime_type)
+        self.set_response_headers(binary, mime_type)
         self.write(binary)
         self.finish()
+
+    def set_response_headers(self, blob, mime_type):
+        self.set_header('Content-Type', mime_type)
+        if 'image/svg+xml' == mime_type and (blob[0] == 0x1f and blob[1] == 0x8b):
+            self.set_header('Content-Encoding', 'gzip')
 
     def _fetch_persistent_db(self):
         return self.persistent.fetch_icon(binascii.a2b_hex(self.image_key.encode('ascii')))
@@ -214,7 +220,7 @@ class HashedImageHandler(tornado.web.RequestHandler):
             if mime_type in ('image/jpeg', 'image/gif', 'image/png'):
                 self._convert_process(blob, self.max_size)
             else:
-                self.set_header("Content-Type", mime_type)
+                self.mime_type = mime_type
                 self._mc_read_body(blob)
         elif len(header) > 6 and header[0:6] == b'VALUE ':
             header = header[6 + len(self.cache_key) + 1:]
@@ -224,6 +230,7 @@ class HashedImageHandler(tornado.web.RequestHandler):
         else:
             raise tornado.web.HTTPError(500)
     def _mc_read_body(self, body):
+        self.set_response_headers(body, self.mime_type)
         self.write(body)
         self.finish()
         self.mc_strm.close()
