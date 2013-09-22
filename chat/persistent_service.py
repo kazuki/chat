@@ -26,6 +26,18 @@ class PersistentServiceBase(object):
     @abc.abstractmethod
     def fetch_icon(self, icon_hash): pass
 
+    # 受信する通知情報を取得 (戻り値はstore_subscriptionsのinfoと同じ形式)
+    @abc.abstractmethod
+    def fetch_subscriptions(self, uid): pass
+
+    # 受信する通知を登録 info = {'facility': level, ...}
+    @abc.abstractmethod
+    def store_subscriptions(self, uid, info): pass
+
+    # 通知を永続化ストレージに配信
+    @abc.abstractmethod
+    def store_notification(self, facility, level, body, date): pass
+
 class PsycopgPersistentService(PersistentServiceBase):
     def __init__(self, config):
         self.db_name = config.get('db_name', None)
@@ -82,3 +94,28 @@ class PsycopgPersistentService(PersistentServiceBase):
                 ret = cur.fetchone()
                 if ret: return (ret[0].tobytes(), ret[1])
                 return (None, None)
+
+    def fetch_subscriptions(self, uid):
+        ret = {}
+        with self.open_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute('''SELECT facility,level FROM subscriptions WHERE uid = %s''', (uid,))
+                ret = dict([(f,l) for f,l in cur.fetchall()])
+        return ret
+
+    def store_subscriptions(self, uid, info):
+        insert_values = []
+        for k,v in info:
+            insert_values.append({'uid':uid, 'facility': k, 'level': v})
+        with self.open_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute('''DELETE FROM subscriptions WHERE uid = %s''', (uid,))
+                if len(insert_values) > 0:
+                    cur.executemany('''INSERT INTO subscriptions(uid, facility, level) VALUES(%(uid)s, %(facility)s, %(level)s''', insert_values)
+
+    def store_notification(self, facility, level, body, date):
+        with self.open_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute('''insert into notifications(uid,read,date,facility,level,body) ''' +
+                            '''select uid,False,%(date)s,%(facility)s,%(level)s,%(body)s from subscriptions where facility = %(facility)s and level >= %(level)s''',
+                            {'facility': facility, 'level': level, 'body': body, 'date': date})
