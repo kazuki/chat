@@ -18,6 +18,7 @@
     var config_ = global.Config || {};
     var config_linkmap_ = config_.LinkMap || [];
     var config_replaces_ = config_.Replaces || [];
+    var config_notification_types_ = config_.NotificationTypes || [];
     $.support.noreferrer = $.support.noreferrer || (function() {
         return window.navigator.userAgent.indexOf('AppleWebKit') != -1;
     })();
@@ -62,11 +63,15 @@
                         delete self.callbacks_[json['e']];
                         try {
                             entry[1](json);
-                        } catch (e) {}
+                        } catch (e) {
+                            console.log(e);
+                        }
                         return;
                     }
                     self.onmessage(json);
-                } catch (e) {}
+                } catch (e) {
+                    console.log(e);
+                }
             }
         };
         this.elapsed_ = function() {
@@ -105,6 +110,7 @@
         var unread_ = 0;
         var inactive_ = false;
         var icon_max_size_ = null;
+        var active_notification_ = null;
 
         /* localStorage キー */
         var LOCALSTORAGE_NAME = "name";
@@ -125,8 +131,6 @@
         var fetch_localstorage_fonts = function() { return localStorage.getItem(LOCALSTORAGE_FONTS) || ''; };
         var fetch_localstorage_font_size = function() { return parseFloat(localStorage.getItem(LOCALSTORAGE_FONT_SIZE) || 1.0); };
         var fetch_localstorage_enable_new_msg_notification = function() { return (localStorage.getItem(LOCALSTORAGE_ENABLE_NEW_MSG_NOTIFICATION) || 'false') == 'true'; };
-        console.log(localStorage.getItem(LOCALSTORAGE_ENABLE_NEW_MSG_NOTIFICATION));
-        console.log(fetch_localstorage_enable_new_msg_notification() ? 'true' : 'false');
 
         var max_view_messages_ = fetch_localstorage_msg_count(); // 最大表示チャットログ行数
 
@@ -235,6 +239,23 @@
                             remove_messages();
                         }
                     }
+
+                    // notification
+                    var subscriptions = {};
+                    $('#config-subscriptions table tbody tr').each(function(idx) {
+                        var facility = $(this).children('td:first').text();
+                        var loglevel = parseInt($(this).find('td select').val());
+                        if (isNaN(loglevel) || loglevel >= 10) return;
+                        subscriptions[facility] = loglevel;
+                    });
+                    sock_.send({
+                        'm': 'set-subscription',
+                        'd': subscriptions
+                    }, function(ev) {
+                        if (ev && ev.r == 'ok') return;
+                        alert('subscription update error. please reload page');
+                    });
+
                     apply_fonts_and_icon_size();
                     $(window).resize();
                     $(this).dialog("close");
@@ -242,6 +263,33 @@
                 'Cancel': function() {
                     $(this).dialog("close");
                 }
+            }
+        }).tabs();
+        (function() {
+            table = $('#config-subscriptions table tbody');
+            var create_level_selector = function() {
+                return $(document.createElement('select'))
+                    .append($(document.createElement('option')).text('購読しない').val('10'))
+                    .append($(document.createElement('option')).text('info').val('2'))
+                    .append($(document.createElement('option')).text('warning').val('1'))
+                    .append($(document.createElement('option')).text('alert').val('0'));
+            };
+            config_notification_types_.forEach(function(entry) {
+                if (entry.length != 1) {
+                    if (!entry[1](WebSocketAuthUserID))
+                        return;
+                }
+                var tr = $(document.createElement('tr'));
+                $(document.createElement('td')).text(entry[0]).appendTo(tr);
+                $(document.createElement('td')).append(create_level_selector()).appendTo(tr);
+                tr.appendTo(table);
+            });            
+        })();
+        $('#notification_button').button({icons:{primary:'ui-icon-info'},text:false}).click(function() {
+            $('#notification-area').css('display', $('#notification-area').css('display') == 'none' ? 'block' : 'none');
+            if (active_notification_) {
+                active_notification_.remove();
+                active_notification_ = null;
             }
         });
         $('#open_icon_file_button').button({icons:{primary:"ui-icon-folder-open"},text:false});
@@ -383,11 +431,29 @@
                     ev.m = ev.m.reverse();
                     for (var i in ev.m) append_msg(ev.m[i]);
                 });
+                sock_.send({
+                    'm': 'get-notifications'
+                }, function(ev) {
+                    if (!ev || ev.r != 'ok') return;
+                    ev.d.forEach(function(entry) {
+                        append_notification(entry.i, entry.f, entry.l, entry.d, entry.t, true);
+                    });
+                });
+                sock_.send({
+                    'm': 'get-subscription'
+                }, function(ev) {
+                    if (!ev || ev.r != 'ok') return;
+                    $('#config-subscriptions table tbody tr').each(function(idx) {
+                        var facility = $(this).children('td:first').text();
+                        $(this).find('td select').val(facility in ev.d ? ev.d[facility].toString() : '10');
+                    });
+                });
             };
             sock_.onmessage = function(ev) {
-                console.log(ev);
                 if (ev.m === 'c') {
                     append_msg(ev.d);
+                } else if (ev.m === 'n') {
+                    append_notification(ev.d.i, ev.d.f, ev.d.l, ev.d.d, ev.d.t, false);
                 }
             };
             sock_.onclose = function() {
@@ -411,6 +477,62 @@
                 if (status == 'denied')
                     disable_notification();
             });
+        };
+        var create_notification = function(nid, facility, level, dt, body) {
+            var widget = $(document.createElement('div')).addClass('ui-widget');
+            widget.data('notification-id', nid);
+            var contents = $(document.createElement('div')).appendTo(
+                $(document.createElement('div')).appendTo(widget)
+                    .addClass('ui-corner-all notification-widget')
+                    .addClass(level == 0 ? 'ui-state-error' : level == 1 ? 'ui-state-highlight' : 'ui-state-active'));
+            var header = $(document.createElement('div')).appendTo(contents);
+            $(document.createElement('span')).addClass('ui-icon').appendTo(header)
+                .addClass(level == 0 ? 'ui-icon-alert' : 'ui-icon-info');
+            $(document.createElement('strong')).text(facility + ' :: ').appendTo(header);
+            $(document.createElement('span')).addClass('notification-date').text(new Date(dt).toString()).appendTo(header);
+            $(document.createElement('span')).addClass('ui-icon ui-icon-closethick').appendTo(header).click(function() {
+                sock_.send({
+                    'm': 'set-read-notification',
+                    'd': [nid]
+                }, function(ev) {
+                    if (ev && ev.r === 'ok') {
+                        if (active_notification_ && active_notification_.data('notification-id') == nid) {
+                            active_notification_.remove();
+                            active_notification_ = null;
+                        }
+                        $('#notification-area').children().each(function(idx) {
+                            if ($(this).data('notification-id') == nid)
+                                $(this).remove();
+                        });
+                        if ($('#notification-area').children().length == 0) {
+                            $('#notification-area').css('display', 'none');
+                            $('#notification_button').css('display', 'none');
+                        }
+                    }
+                });
+            });
+            $(document.createElement('div')).text(body).appendTo(contents);
+            return widget;
+        };
+        var append_notification = function(nid, facility, level, dt, body, inactive) {
+            var widget = create_notification(nid, facility, level, dt, body).prependTo($('#notification-area'));
+            $('#notification_button').css('display', 'inline-block');
+            if ($('#notification-area').css('display') == 'none' && !inactive) {
+                if (active_notification_)
+                    active_notification_.remove();
+                var use_effects = (active_notification_ == null);
+                var notify = active_notification_ = create_notification(nid, facility, level, dt, body)
+                    .addClass('active-notification').appendTo($(document.body));
+                if (use_effects) {
+                    notify.css('display', 'none');
+                    notify.fadeIn('slow');
+                }
+                window.setTimeout(function() {
+                    notify.fadeOut('slow', function() { notify.remove(); });
+                    if (active_notification_ == notify)
+                        active_notification_ = null;
+                }, 5000);
+            }
         };
 
         post_button.click(function() {
@@ -444,6 +566,7 @@
         });
         $(window).resize(function() {
             $('#msg_container').css('margin-top', post_container.outerHeight(true));
+            $('#notification-area').css('top', post_container.outerHeight(true));
             ws_status.height(post_container.outerHeight(true));
             ws_status_msg.css('top', ((post_container.outerHeight(true) - ws_status_msg.outerHeight(true)) / 2) + 'px');
             ws_status_msg.css('left', ((post_container.outerWidth(true) - ws_status_msg.outerWidth(true)) / 2) + 'px');

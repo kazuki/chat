@@ -17,3 +17,15 @@ body{padding:0;margin:0}
 #ws_status_msg{position:fixed;left:0;top:0;z-index:11;}
 #ws_status_msg > div > div {margin:0.5ex}
 #config_icon_preview {max-width:96px;max-height:96px;margin-right:1ex}
+#config-subscriptions td {padding: 0.5em;}
+#notification_button{display:none}
+#notification-area{position:fixed;margin-top:1em;right:0;z-index:3;padding-right:0.3ex;margin-right:1ex;height:70%;overflow-y:scroll;display:none}
+.notification-widget{padding:1em;margin-bottom:1ex}
+.notification-widget > div > div > * {float: left;}
+.notification-widget > div > div > .ui-icon:first-child{margin-right:0.5ex}
+.notification-widget > div > div > .ui-icon-closethick{margin-left:0.5ex;opacity:0.5;cursor:pointer}
+.notification-widget > div > div > .ui-icon-closethick:hover{opacity:1;}
+.notification-widget > div{white-space:pre}
+.notification-widget > div > span.notification-date{font-weight:normal}
+.notification-widget > div > div{clear:both;font-weight:normal}
+.active-notification{position:fixed;margin:1em;top:0;right:0;z-index:4}

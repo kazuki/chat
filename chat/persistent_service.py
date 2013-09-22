@@ -34,9 +34,17 @@ class PersistentServiceBase(object):
     @abc.abstractmethod
     def store_subscriptions(self, uid, info): pass
 
-    # 通知を永続化ストレージに配信
+    # 通知を永続化ストレージに配信(戻り値は通知情報のユニークID)
     @abc.abstractmethod
     def store_notification(self, facility, level, body, date): pass
+
+    # 未読通知を取得
+    @abc.abstractmethod
+    def fetch_notifications(self, uid): pass
+
+    # 通知を既読にする
+    @abc.abstractmethod
+    def set_read_notifications(self, uid, nids): pass
 
 class PsycopgPersistentService(PersistentServiceBase):
     def __init__(self, config):
@@ -48,12 +56,14 @@ class PsycopgPersistentService(PersistentServiceBase):
     def open_db(self):
         return psycopg2.connect(database=self.db_name, user=self.db_user, password=self.db_pass, host=self.db_host)
 
-    def dbrow_to_json(self, row):
-        dt = row[1]
-        icon_hash = None
+    def _db_result_to_unixtime(self, dt):
         if dt.tzinfo: dt = dt.astimezone(datetime.timezone.utc)
+        return int((dt - UNIXTIME_ORIGIN).total_seconds() * 1000)
+
+    def dbrow_to_json(self, row):
+        icon_hash = None
         if row[4]: icon_hash = binascii.b2a_hex(row[4]).decode('ascii')
-        return {'i': row[0], 'd': int((dt - UNIXTIME_ORIGIN).total_seconds() * 1000),
+        return {'i': row[0], 'd': self._db_result_to_unixtime(row[1]),
                 'n': row[2], 'c': row[3], 'g': icon_hash, 't': row[5]}
 
     def store(self, uid, date, name, color, icon_hash, body):
@@ -105,17 +115,35 @@ class PsycopgPersistentService(PersistentServiceBase):
 
     def store_subscriptions(self, uid, info):
         insert_values = []
-        for k,v in info:
+        for k,v in info.items():
             insert_values.append({'uid':uid, 'facility': k, 'level': v})
         with self.open_db() as conn:
             with conn.cursor() as cur:
                 cur.execute('''DELETE FROM subscriptions WHERE uid = %s''', (uid,))
                 if len(insert_values) > 0:
-                    cur.executemany('''INSERT INTO subscriptions(uid, facility, level) VALUES(%(uid)s, %(facility)s, %(level)s''', insert_values)
+                    cur.executemany('''INSERT INTO subscriptions(uid, facility, level) VALUES(%(uid)s, %(facility)s, %(level)s)''', insert_values)
 
     def store_notification(self, facility, level, body, date):
         with self.open_db() as conn:
             with conn.cursor() as cur:
-                cur.execute('''insert into notifications(uid,read,date,facility,level,body) ''' +
-                            '''select uid,False,%(date)s,%(facility)s,%(level)s,%(body)s from subscriptions where facility = %(facility)s and level >= %(level)s''',
-                            {'facility': facility, 'level': level, 'body': body, 'date': date})
+                cur.execute('INSERT INTO notifications (date, facility, level, body) VALUES (%s, %s, %s, %s) RETURNING id',
+                            (date, facility, level, body))
+                conn.commit()
+                nid = cur.fetchone()[0]
+                cur.execute('''insert into notification_box(uid,read,nid) ''' +
+                            '''select uid,False,%(nid)s from subscriptions where facility = %(facility)s and level >= %(level)s''',
+                            {'nid':nid, 'facility': facility, 'level': level})
+                return nid
+
+    def fetch_notifications(self, uid):
+        with self.open_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute('''select id,facility,level,date,body from (select * from notification_box where uid=%s and read=False) as t,notifications where t.nid = notifications.id''', (uid,))
+                return [{'i':x[0], 'f':x[1], 'l':x[2], 'd':self._db_result_to_unixtime(x[3]), 't':x[4]} for x in cur.fetchall()]
+
+    def set_read_notifications(self, uid, nids):
+        if len(nids) == 0: return
+        with self.open_db() as conn:
+            with conn.cursor() as cur:
+                for nid in nids:
+                    cur.execute('UPDATE notification_box SET read = True WHERE uid=%s and nid=%s', (uid, nid))

@@ -44,6 +44,7 @@ class ChatServiceWebSocketHandler(tornado.websocket.WebSocketHandler):
                 if not WebSocketAuth.verify_token(user_id, req['nonce'], self.request, req['token']):
                     raise tornado.web.HTTPError(401)
                 self.authenticated_user_id = user_id
+                self.subscribed[b'n'][1] = dict([(k.encode('utf-8'),v) for k,v in self.persistent.fetch_subscriptions(self.current_user).items()])
             return
 
         if req['m'] == 'post':
@@ -81,6 +82,31 @@ class ChatServiceWebSocketHandler(tornado.websocket.WebSocketHandler):
                 'h': icon_hash_hex
             }))
         elif req['m'] == 'ping':
+            self.write_message(json.dumps({
+                'e': req['e'],
+                'r': 'ok'
+            }))
+        elif req['m'] == 'get-subscription':
+            self.write_message(json.dumps({
+                'e': req['e'],
+                'r': 'ok',
+                'd': self.persistent.fetch_subscriptions(self.current_user)
+            }))
+        elif req['m'] == 'set-subscription':
+            self.persistent.store_subscriptions(self.current_user, req['d'])
+            self.subscribed[b'n'][1] = dict([(k.encode('utf-8'),v) for k,v in req['d'].items()])
+            self.write_message(json.dumps({
+                'e': req['e'],
+                'r': 'ok'
+            }))
+        elif req['m'] == 'get-notifications':
+            self.write_message(json.dumps({
+                'e': req['e'],
+                'r': 'ok',
+                'd': self.persistent.fetch_notifications(self.current_user)
+            }))
+        elif req['m'] == 'set-read-notification':
+            self.persistent.set_read_notifications(self.current_user, req['d'])
             self.write_message(json.dumps({
                 'e': req['e'],
                 'r': 'ok'

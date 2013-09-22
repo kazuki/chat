@@ -17,3 +17,9 @@ Config.LinkMap = [
 Config.Replaces = [
 //  [/^(.*)$/, '$1']
 ];
+
+/* 通知種別を定義 */
+Config.NotificationTypes = [
+//    ['hoge'],
+//    ['sys', function(uid) { return uid == 'admin'; }]
+];
