@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import zmq, configparser, optparse
+import zmq, configparser, optparse, sys
 
 class MessageHub(object):
     def __init__(self, config_path = None):
@@ -58,6 +58,8 @@ def main():
         if options.user is None:
             print('user-id is required')
             return
+    if options.body == '-':
+        options.body = sys.stdin.read()
 
     msg_body = None
     if options.type == 'c':
