@@ -265,6 +265,8 @@
                 }
             }
         }).tabs();
+        if (!window.Notification)
+            $('#config_enable_new_msg_notification').parent().parent().css('display', 'none');
         (function() {
             table = $('#config-subscriptions table tbody');
             var create_level_selector = function() {
