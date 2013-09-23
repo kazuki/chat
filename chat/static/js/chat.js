@@ -533,6 +533,14 @@
                         active_notification_ = null;
                 }, 5000);
             }
+
+            if (!inactive && inactive_) {
+                if (window.Notification && fetch_localstorage_enable_new_msg_notification()) {
+                    var levelname = (level == 0 ? 'Alert' : level == 1 ? 'Warning' : 'Info');
+                    new window.Notification(facility + " : " + levelname,
+                                            {tag: facility + '-notification', body: body});
+                }
+            }
         };
 
         post_button.click(function() {
