@@ -21,13 +21,17 @@
         <input id="msg_field" type="text" value="" />
       </div>
       <div id="post_rightcol">
-        <button id="post_button">送信</button><button id="config_button">設定</button>
+        <button id="post_button">送信</button><button id="config_button">設定</button><button id="notification_button">通知</button>
       </div>
     </div>
     <div id="msg_container"></div>
 
     <div id="config_dialog" title="Configuration">
-      <table>
+      <ul>
+        <li><a href="#config-tabs-1">一般</a></li>
+        <li><a href="#config-tabs-2">通知</a></li>
+      </ul>
+      <table id="config-tabs-1">
         <tr>
           <td>
             <img id="config_icon_preview" />
@@ -64,6 +68,21 @@
           <td colspan="2"><input type="checkbox" id="config_enable_new_msg_notification" /><label for="config_enable_new_msg_notification">非アクティブ時の新着メッセージを通知する</label></td>
         </tr>
       </table>
+      <div id="config-tabs-2">
+        <div id="config-subscriptions">
+          <table>
+            <thead class="ui-widget-header">
+              <tr>
+                <td>種類</td>
+                <td>購読レベル</td>
+              </tr>
+            </thead>
+            <tbody class="ui-widget-content" />
+          </table>
+        </div>
+      </div>
     </div>
+
+    <div id="notification-area"></div>
   </body>
 </html>

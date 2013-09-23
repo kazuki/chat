@@ -21,10 +21,15 @@ class ChatServiceWebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def open(self):
         print('[ws::open]', self.request.headers)
+        self.subscribed = {
+            b'c': [self.message_filter_chat, None],
+            b'n': [self.message_filter_notification, {}],
+            b'm': [self.message_filter_unicast, None]
+        }
         self.ctx = zmq.Context()
         self.sub_sock = self.ctx.socket(zmq.SUB)
         self.sub_sock.connect(self.config.get('sub_endpoint', 'tcp://127.0.0.1:60000'))
-        self.sub_sock.setsockopt(zmq.SUBSCRIBE, b'chat\0')
+        self.sub_sock.setsockopt(zmq.SUBSCRIBE, b'')
         self.strm = zmq.eventloop.zmqstream.ZMQStream(self.sub_sock)
         self.strm.on_recv(self.on_message_from_hub)
         self.push_sock = self.ctx.socket(zmq.PUSH)
@@ -39,6 +44,7 @@ class ChatServiceWebSocketHandler(tornado.websocket.WebSocketHandler):
                 if not WebSocketAuth.verify_token(user_id, req['nonce'], self.request, req['token']):
                     raise tornado.web.HTTPError(401)
                 self.authenticated_user_id = user_id
+                self.subscribed[b'n'][1] = dict([(k.encode('utf-8'),v) for k,v in self.persistent.fetch_subscriptions(self.current_user).items()])
             return
 
         if req['m'] == 'post':
@@ -50,7 +56,7 @@ class ChatServiceWebSocketHandler(tornado.websocket.WebSocketHandler):
             msg_hash = self.compute_message_hash(req)
             # TODO: ハッシュ値を使った重複チェック
             uid = self.persistent.store(self.current_user, dt, req['n'], req['c'], icon_hash, req['t'])
-            self.push_sock.send(b'chat\0' + json.dumps({
+            self.push_sock.send(b'c' + json.dumps({
                 'n': req['n'], 'c': req['c'], 't': req['t'],
                 'i': uid, 'd': req['d'], 'g': req['g']
             }).encode('utf-8'))
@@ -80,16 +86,51 @@ class ChatServiceWebSocketHandler(tornado.websocket.WebSocketHandler):
                 'e': req['e'],
                 'r': 'ok'
             }))
+        elif req['m'] == 'get-subscription':
+            self.write_message(json.dumps({
+                'e': req['e'],
+                'r': 'ok',
+                'd': self.persistent.fetch_subscriptions(self.current_user)
+            }))
+        elif req['m'] == 'set-subscription':
+            self.persistent.store_subscriptions(self.current_user, req['d'])
+            self.subscribed[b'n'][1] = dict([(k.encode('utf-8'),v) for k,v in req['d'].items()])
+            self.write_message(json.dumps({
+                'e': req['e'],
+                'r': 'ok'
+            }))
+        elif req['m'] == 'get-notifications':
+            self.write_message(json.dumps({
+                'e': req['e'],
+                'r': 'ok',
+                'd': self.persistent.fetch_notifications(self.current_user)
+            }))
+        elif req['m'] == 'set-read-notification':
+            self.persistent.set_read_notifications(self.current_user, req['d'])
+            self.write_message(json.dumps({
+                'e': req['e'],
+                'r': 'ok'
+            }))
         else:
             print('unknown:', req)
 
     def on_message_from_hub(self, messages):
         if not self.authenticated_user_id: return
         for msg in messages:
-            obj = json.loads(msg[5:].decode('utf-8'))
+            msg_type = msg[0:1]
+            msg_body = msg[1:]
+            print('[DEBUG]', msg)
+            if msg_type not in self.subscribed:
+                print('[DEBUG]', msg_type, 'is not subscribed')
+                continue
+            func, args = self.subscribed[msg_type]
+            msg_body = func(msg_body, args)
+            if msg_body is None:
+                print('[DEBUG]', 'filtered')
+                continue
             self.write_message(json.dumps({
-                'm': 'strm',
-                'd': obj
+                'm': msg_type.decode('ascii'),
+                'd': json.loads(msg_body.decode('utf-8'))
             }))
 
     def on_close(self):
@@ -112,6 +153,28 @@ class ChatServiceWebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def allow_draft76(self):
         return self.enabled_draft76
+
+    # チャット用メッセージフィルタ
+    def message_filter_chat(self, m, hoge):
+        return m
+
+    # 通知用メッセージフィルタ
+    def message_filter_notification(self, m, subscribed):
+        idx = m.find(b'\0')
+        if idx < 0: return None
+        facility = m[0:idx]
+        if facility not in subscribed: return None
+        log_level = m[idx + 1]
+        if log_level > subscribed[facility]: return None
+        return m[idx + 2:]
+
+    # ユーザ指定メッセージ通知用フィルタ
+    def message_filter_unicast(self, m, subscribed):
+        idx = m.find(b'\0')
+        if idx < 0: return None
+        if idx == 0 or m[0:idx] == self.get_current_user().encode('utf-8'):
+            return m[idx + 1:]
+        return None
 
 class ChatServiceLiteHandler(tornado.web.RequestHandler):
     def initialize(self, config, auth):
@@ -163,7 +226,7 @@ class ChatServiceLiteHandler(tornado.web.RequestHandler):
         if body is not None and len(body) > 0:
             dt = datetime.datetime.now(datetime.timezone.utc)
             msgid = self.persistent.store(self.current_user, dt, name, color, None, body)
-            self.push_sock.send(b'chat\0' + json.dumps({
+            self.push_sock.send(b'c' + json.dumps({
                 'n': name, 'c': color, 't': body,
                 'i': msgid, 'd': int((dt - UNIXTIME_ORIGIN).total_seconds() * 1000), 'g': None
             }).encode('utf-8'))
